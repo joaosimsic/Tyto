@@ -2,18 +2,20 @@ mod frontend;
 mod middle;
 
 use frontend::parse_dsl;
+use middle::{StateGraph, Validator};
 
 fn main() {
     let input_code = r#"
         state Pendente {
-            on Pagar -> Pago;
-            on Cancelar -> Cancelado;
+            data { id: String, }
         }
 
         state Pago {
-            data { transaction_id: String, }
             on Enviar -> Enviado;
-            on Reembolsar -> Reembolsado;
+        }
+
+        state Esquecido {
+            terminal;
         }
 
         state Enviado {
@@ -25,11 +27,28 @@ fn main() {
 
     match parse_dsl(input_code) {
         Ok(ast) => {
-            println!("AST generated");
-            println!("{:#?}", ast);
+            println!("✅ AST generated successfully.");
+
+            match StateGraph::from_ast(&ast) {
+                Ok(graph) => {
+                    println!("✅ Graph generated successfully.");
+
+                    if let Err(errors) = Validator::validate(&graph) {
+                        println!("\n❌ Validation Errors Found:");
+                        for err in errors {
+                            eprintln!("  - {}", err);
+                        }
+                    } else {
+                        println!("✅ Validation passed! The state machine is sound.");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("❌ Graph Semantic Error:\n{}", e);
+                }
+            }
         }
         Err(e) => {
-            eprintln!("Syntax error:\n{}", e);
+            eprintln!("❌ Syntax error:\n{}", e);
         }
     }
 }
