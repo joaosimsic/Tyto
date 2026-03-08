@@ -3,6 +3,7 @@ mod cli;
 mod config;
 mod frontend;
 mod middle;
+mod ui;
 
 use clap::Parser;
 use std::fs;
@@ -19,7 +20,7 @@ fn main() {
 
     match &cli.command {
         Commands::Init => {
-            println!("Tyto - Initializing new workspace...");
+            ui::print_header("Initializing new workspace");
 
             let global_yaml = "workspace_dir: \"./tyto\"\nformatters:\n  typescript: \"npx prettier --write\"\n  rust: \"rustfmt\"\n";
             let local_yaml = "source: \"example.ty\"\ntargets:\n  typescript:\n    out_dir: \"../../output/ts\"\n  rust:\n    out_dir: \"../../output/rust\"\n  mermaid:\n    out_dir: \"../../output/docs\"\n";
@@ -35,19 +36,22 @@ fn main() {
             fs::write(example_path.join("example.ty"), example_ty)
                 .expect("Failed to create example.ty");
 
-            println!("  [✔] Created 'tyto.yaml' (Global Config)");
-            println!("  [✔] Created folder 'tyto/example/'");
-            println!("  [✔] Created 'tyto/example/example.yaml' (Local Config)");
-            println!("  [✔] Created 'tyto/example/example.ty' (DSL Source)");
+            ui::success("Created 'tyto.yaml' (Global Config)");
+            ui::success("Created folder 'tyto/example/'");
+            ui::success("Created 'tyto/example/example.yaml' (Local Config)");
+            ui::success("Created 'tyto/example/example.ty' (DSL Source)");
 
-            println!("\nWorkspace initialized! Try running:");
-            println!("  tyto build");
+            ui::complete("Workspace initialized");
+            ui::hint("Try running:");
+            ui::command_hint("tyto build");
         }
         Commands::Compile {
             source,
             langs,
             out_dir,
         } => {
+            ui::print_header("Compiling source file");
+
             let source_path = Path::new(source);
             let source_dir = source_path.parent().unwrap_or(Path::new("."));
             let file_stem = source_path.file_stem().unwrap().to_str().unwrap();
@@ -55,23 +59,23 @@ fn main() {
             let local_yaml_path = source_dir.join(format!("{}.yaml", file_stem));
             let local_config = LocalConfig::load(&local_yaml_path).ok();
 
+            ui::info(&format!("Source: {}", source));
+
             let source_code = fs::read_to_string(source_path).unwrap_or_else(|_| {
-                eprintln!("Error: Source file '{}' not found.", source);
+                ui::error(&format!("Source file '{}' not found", source));
                 std::process::exit(1);
             });
 
             let ast = parse_dsl(&source_code).unwrap_or_else(|e| {
-                eprintln!("Syntax error:\n{}", e);
+                ui::syntax_error(None, &e.to_string());
                 std::process::exit(1);
             });
 
             let graph = StateGraph::from_ast(&ast).expect("Semantic error.");
             Validator::validate(&graph)
                 .map_err(|errors| {
-                    eprintln!("Validation Errors:");
-                    for err in errors {
-                        eprintln!("  - {}", err);
-                    }
+                    let err_strings: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+                    ui::validation_errors(None, &err_strings);
                     std::process::exit(1);
                 })
                 .unwrap();
@@ -107,35 +111,35 @@ fn main() {
 
                     fs::write(&file_path, code).expect("Error saving file.");
                     let display_path = file_path.canonicalize().unwrap_or(file_path);
-                    println!(
-                        "  [{}] successfully generated: {}",
-                        lang.to_uppercase(),
-                        display_path.display()
-                    );
+                    ui::success_lang(lang, &display_path.display().to_string());
                 } else {
-                    println!("  Warning: Target language '{}' is not supported.", lang);
+                    ui::warning(&format!("Target language '{}' is not supported", lang));
                 }
             }
+
+            ui::complete("Compilation finished");
         }
         Commands::Build { config, machine } => {
-            println!("Tyto - Starting workspace build...\n");
+            ui::print_header("Building workspace");
 
             let global_config = match GlobalConfig::load(config) {
                 Ok(c) => c,
                 Err(e) => {
-                    eprintln!("Error reading global configuration '{}': '{}'", config, e);
+                    ui::error(&format!("Failed to read config '{}': {}", config, e));
                     std::process::exit(1);
                 }
             };
 
             let workspace_path = Path::new(&global_config.workspace_dir);
             if !workspace_path.exists() || !workspace_path.is_dir() {
-                eprintln!(
-                    "The workspace directory '{}' does not exists",
+                ui::error(&format!(
+                    "Workspace directory '{}' does not exist",
                     global_config.workspace_dir
-                );
+                ));
                 std::process::exit(1);
             }
+
+            let mut modules_processed = 0;
 
             for entry in fs::read_dir(workspace_path).expect("Error reading workspace_dir") {
                 let entry = entry.unwrap();
@@ -150,15 +154,15 @@ fn main() {
                         }
                     }
 
-                    println!("Processing module: [{}]", dir_name);
+                    ui::module_header(dir_name);
 
                     let local_yaml_path = path.join(format!("{}.yaml", dir_name));
 
                     if !local_yaml_path.exists() {
-                        println!(
-                            "Warning: Configuration '{}' not found. Skipping.",
+                        ui::warning(&format!(
+                            "Configuration '{}' not found, skipping",
                             local_yaml_path.display()
-                        );
+                        ));
                         continue;
                     }
 
@@ -167,28 +171,27 @@ fn main() {
                     let source_path = path.join(&local_config.source);
 
                     let source_code = fs::read_to_string(&source_path).unwrap_or_else(|_| {
-                        eprintln!(
-                            "  Error: Source file '{}' not found.",
+                        ui::error(&format!(
+                            "Source file '{}' not found",
                             source_path.display()
-                        );
+                        ));
                         std::process::exit(1);
                     });
 
                     let ast = match parse_dsl(&source_code) {
                         Ok(tree) => tree,
                         Err(e) => {
-                            eprintln!("  Syntax error in the DSL module '{}':\n{}", dir_name, e);
+                            ui::syntax_error(Some(dir_name), &e.to_string());
                             std::process::exit(1);
                         }
                     };
 
-                    let graph = StateGraph::from_ast(&ast).expect("  Semantic error.");
+                    let graph = StateGraph::from_ast(&ast).expect("Semantic error.");
 
                     if let Err(errors) = Validator::validate(&graph) {
-                        eprintln!("  Validation Errors in '{}':", dir_name);
-                        for err in errors {
-                            eprintln!("    - {}", err);
-                        }
+                        let err_strings: Vec<String> =
+                            errors.iter().map(|e| e.to_string()).collect();
+                        ui::validation_errors(Some(dir_name), &err_strings);
                         std::process::exit(1);
                     }
 
@@ -211,14 +214,10 @@ fn main() {
                                 generator.extension()
                             ));
 
-                            fs::write(&file_path, code).expect("Error to save generated file.");
+                            fs::write(&file_path, code).expect("Error saving generated file.");
                             let display_path =
                                 file_path.canonicalize().unwrap_or(file_path.clone());
-                            println!(
-                                "  [{}] successfully generated in: {}",
-                                lang.to_uppercase(),
-                                display_path.display()
-                            );
+                            ui::success_lang(lang, &display_path.display().to_string());
 
                             if let Some(formatters) = &global_config.formatters {
                                 if let Some(cmd_str) = formatters.get(lang) {
@@ -238,29 +237,39 @@ fn main() {
                                             Ok(output) => {
                                                 let stderr =
                                                     String::from_utf8_lossy(&output.stderr);
-                                                println!(
-                                                    "    Warning: Formatter '{}' failed.\n{}",
-                                                    cmd_str, stderr
-                                                );
+                                                ui::warning(&format!(
+                                                    "Formatter '{}' failed: {}",
+                                                    cmd_str,
+                                                    stderr.trim()
+                                                ));
                                             }
                                             Err(e) => {
-                                                println!("    Warning: Could not run formatter '{}' ({}). Is it installed in your PATH?", cmd_str, e);
+                                                ui::warning(&format!(
+                                                    "Could not run formatter '{}': {}",
+                                                    cmd_str, e
+                                                ));
                                             }
                                         }
                                     }
                                 }
                             }
                         } else {
-                            println!(
-                                "  Warning: Target language '{}' is not supported by Tyto.",
-                                lang
-                            );
+                            ui::warning(&format!("Target language '{}' is not supported", lang));
                         }
                     }
-                    println!("");
+                    modules_processed += 1;
                 }
             }
-            println!("Workspace build complete!");
+
+            if modules_processed == 0 {
+                ui::warning("No modules found in workspace");
+            } else {
+                ui::complete(&format!(
+                    "Build finished ({} module{})",
+                    modules_processed,
+                    if modules_processed == 1 { "" } else { "s" }
+                ));
+            }
         }
     }
 }
