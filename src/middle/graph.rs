@@ -7,7 +7,6 @@ use crate::frontend::ast::{Transition, TytoProgram};
 #[derive(Debug)]
 pub struct StateGraph {
     pub graph: Graph<String, Transition>,
-    pub indices: HashMap<String, NodeIndex>,
     pub terminal_nodes: Vec<NodeIndex>,
 }
 
@@ -43,7 +42,6 @@ impl StateGraph {
 
         Ok(StateGraph {
             graph,
-            indices,
             terminal_nodes,
         })
     }
