@@ -1,4 +1,3 @@
-// src/main.rs
 mod backend;
 mod cli;
 mod config;
