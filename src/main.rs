@@ -122,19 +122,17 @@ fn main() {
                                         command.arg(&file_path);
 
                                         match command.output() {
-                                            Ok(output) if output.status.success() => {
-                                                println!(
-                                                    "    Formatter '{}' applied successfully.",
-                                                    program
-                                                );
-                                            }
+                                            Ok(output) if output.status.success() => {}
                                             Ok(output) => {
                                                 let stderr =
                                                     String::from_utf8_lossy(&output.stderr);
-                                                println!("    Warning: Formatter '{}' returned a non-zero status.\n{}", program, stderr);
+                                                println!(
+                                                    "    Warning: Formatter '{}' failed.\n{}",
+                                                    cmd_str, stderr
+                                                );
                                             }
                                             Err(e) => {
-                                                println!("    Warning: Could not run formatter '{}' ({}). Is it installed in your PATH?", program, e);
+                                                println!("    Warning: Could not run formatter '{}' ({}). Is it installed in your PATH?", cmd_str, e);
                                             }
                                         }
                                     }
