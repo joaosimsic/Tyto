@@ -13,7 +13,7 @@ pub fn generate_ts(program: &TytoProgram) -> String {
         state_interfaces.push(interface_name.clone());
 
         output.push_str(&format!("export interface {} {{\n", interface_name));
-        output.push_str(&format!("  type: '{}':\n", state.name));
+        output.push_str(&format!("   type: '{}';\n", state.name));
 
         if let Some(data) = &state.data {
             output.push_str("   data: {\n");
@@ -24,7 +24,7 @@ pub fn generate_ts(program: &TytoProgram) -> String {
                     "bool" => "boolean",
                     _ => "any",
                 };
-                output.push_str(&format!("  {}: {};\n", field.name, ts_type));
+                output.push_str(&format!("      {}: {};\n", field.name, ts_type));
             }
             output.push_str("   };\n");
         }
@@ -34,7 +34,7 @@ pub fn generate_ts(program: &TytoProgram) -> String {
 
     output.push_str(&format!(
         "export type AppState =\n  | {};\n",
-        state_interfaces.join("\n  |")
+        state_interfaces.join("\n  | ")
     ));
 
     output
