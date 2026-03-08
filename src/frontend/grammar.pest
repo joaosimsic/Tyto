@@ -4,13 +4,21 @@ context_block = { "context" ~ "{" ~ field* ~ "}" }
 
 state = { "state" ~ ident ~ "{" ~ (transition | data_block | terminal_flag)* ~ "}" }
 
-transition = { "on" ~ ident ~ "->" ~ ident ~ ";" }
+transition = { "on" ~ transition_type? ~ ident ~ "->" ~ ident ~ ";" }
+
+transition_type = { "success" | "recoverable" | "fatal" }
 
 data_block = { "data" ~ "{" ~ field* ~ "}" }
 
 field = { ident ~ ":" ~ type_name ~ ","? }
 
-type_name = { "String" | "Int" | "Float" | "Bool" }
+type_name = { option_type | array_type | base_type }
+
+array_type = @{ base_type ~ "[]" }
+
+option_type = @{ (array_type | base_type) ~ "?" }
+
+base_type = { "String" | "Int" | "Float" | "Bool" }
 
 terminal_flag = { "terminal" ~ ";" }
 
