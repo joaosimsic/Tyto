@@ -1,4 +1,15 @@
-use crate::frontend::ast::TytoProgram;
+use crate::frontend::ast::{Field, State, TytoProgram};
+
+fn get_state_fields(program: &TytoProgram, state: &State) -> Vec<Field> {
+    let mut fields = Vec::new();
+    if let Some(ctx) = &program.context {
+        fields.extend(ctx.fields.clone());
+    }
+    if let Some(data) = &state.data {
+        fields.extend(data.fields.clone());
+    }
+    fields
+}
 
 pub fn generate_ts(program: &TytoProgram) -> String {
     let mut output = String::new();
@@ -15,9 +26,11 @@ pub fn generate_ts(program: &TytoProgram) -> String {
         output.push_str(&format!("export interface {} {{\n", interface_name));
         output.push_str(&format!("   readonly type: '{}';\n", state.name));
 
-        if let Some(data) = &state.data {
+        let state_fields = get_state_fields(program, state);
+
+        if !state_fields.is_empty() {
             output.push_str("   readonly data: {\n");
-            for field in &data.fields {
+            for field in &state_fields {
                 let ts_type = match field.field_type.as_str() {
                     "String" => "string",
                     "u32" | "i32" | "f64" => "number",
@@ -40,6 +53,8 @@ pub fn generate_ts(program: &TytoProgram) -> String {
     output.push_str("export class Tyto {\n");
 
     for state in &program.states {
+        let source_fields = get_state_fields(program, state);
+
         for transition in &state.transitions {
             let target_state = program
                 .states
@@ -47,11 +62,23 @@ pub fn generate_ts(program: &TytoProgram) -> String {
                 .find(|s| s.name == transition.target)
                 .expect("Error: Target state not found.");
 
+            let target_fields = get_state_fields(program, target_state);
+
+            let mut new_fields = Vec::new();
+            for t_field in &target_fields {
+                if !source_fields
+                    .iter()
+                    .any(|s_field| s_field.name == t_field.name)
+                {
+                    new_fields.push(t_field);
+                }
+            }
+
             let mut payload_arg = String::new();
 
-            if let Some(data) = &target_state.data {
+            if !new_fields.is_empty() {
                 let mut arg_types = Vec::new();
-                for field in &data.fields {
+                for field in &new_fields {
                     let ts_type = match field.field_type.as_str() {
                         "String" => "string",
                         "u32" | "i32" | "f64" => "number",
@@ -70,14 +97,17 @@ pub fn generate_ts(program: &TytoProgram) -> String {
         }
     }
 
-    output
-        .push_str("  static transition(state: AppState, event: string, nextData?: unknown): AppState {\n");
+    output.push_str(
+        "  static transition(state: AppState, event: string, nextData?: unknown): AppState {\n",
+    );
     output.push_str("    switch (state.type) {\n");
 
     for state in &program.states {
         if state.transitions.is_empty() {
             continue;
         }
+
+        let source_fields = get_state_fields(program, state);
 
         output.push_str(&format!("      case '{}':\n", state.name));
         for transition in &state.transitions {
@@ -87,10 +117,32 @@ pub fn generate_ts(program: &TytoProgram) -> String {
                 .find(|s| s.name == transition.target)
                 .unwrap();
 
-            let data_assign = if target_state.data.is_some() {
-                format!(", data: nextData as {}State['data']", target_state.name)
-            } else {
+            let target_fields = get_state_fields(program, target_state);
+
+            let mut new_fields = Vec::new();
+            for t_field in &target_fields {
+                if !source_fields
+                    .iter()
+                    .any(|s_field| s_field.name == t_field.name)
+                {
+                    new_fields.push(t_field);
+                }
+            }
+
+            let data_assign = if target_fields.is_empty() {
                 String::new()
+            } else if source_fields.is_empty() {
+                format!(", data: nextData as {}State['data']", target_state.name)
+            } else if new_fields.is_empty() {
+                format!(
+                    ", data: state.data as unknown as {}State['data']",
+                    target_state.name
+                )
+            } else {
+                format!(
+                    ", data: ({{ ...state.data, ...(nextData as object) }} as unknown) as {}State['data']",
+                    target_state.name
+                )
             };
 
             output.push_str(&format!(
@@ -106,7 +158,7 @@ pub fn generate_ts(program: &TytoProgram) -> String {
         "    throw new Error(`Invalid transition: ${event} from state ${state.type}`);\n",
     );
     output.push_str("  }\n");
-    
+
     output.push_str("}\n");
 
     output
