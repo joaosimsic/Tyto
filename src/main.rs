@@ -1,6 +1,7 @@
 mod frontend; 
 mod middle; 
 mod backend;
+mod config;
 
 use frontend::parse_dsl; 
 use middle::{StateGraph, Validator}; 
