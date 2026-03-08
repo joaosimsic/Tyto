@@ -27,7 +27,7 @@ pub struct DataBlock {
 #[derive(Debug, Clone)]
 pub struct Field {
     pub name: String,
-    pub field_type: String,
+    pub field_type: TytoType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,4 +36,19 @@ pub enum TransitionType {
     Recoverable,
     Fatal,
     Default,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum BaseType {
+    String,
+    Int,
+    Float,
+    Bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TytoType {
+    Base(BaseType),
+    Array(Box<TytoType>),
+    Optional(Box<TytoType>),
 }
