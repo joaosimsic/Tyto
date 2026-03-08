@@ -13,16 +13,16 @@ pub fn generate_ts(program: &TytoProgram) -> String {
         state_interfaces.push(interface_name.clone());
 
         output.push_str(&format!("export interface {} {{\n", interface_name));
-        output.push_str(&format!("   type: '{}';\n", state.name));
+        output.push_str(&format!("   readonly type: '{}';\n", state.name));
 
         if let Some(data) = &state.data {
-            output.push_str("   data: {\n");
+            output.push_str("   readonly data: {\n");
             for field in &data.fields {
                 let ts_type = match field.field_type.as_str() {
                     "String" => "string",
                     "u32" | "i32" | "f64" => "number",
                     "bool" => "boolean",
-                    _ => "any",
+                    _ => "unknown",
                 };
                 output.push_str(&format!("      {}: {};\n", field.name, ts_type));
             }
@@ -33,9 +33,81 @@ pub fn generate_ts(program: &TytoProgram) -> String {
     }
 
     output.push_str(&format!(
-        "export type AppState =\n  | {};\n",
+        "export type AppState =\n  | {};\n\n",
         state_interfaces.join("\n  | ")
     ));
+
+    output.push_str("export class Tyto {\n");
+
+    for state in &program.states {
+        for transition in &state.transitions {
+            let target_state = program
+                .states
+                .iter()
+                .find(|s| s.name == transition.target)
+                .expect("Error: Target state not found.");
+
+            let mut payload_arg = String::new();
+
+            if let Some(data) = &target_state.data {
+                let mut arg_types = Vec::new();
+                for field in &data.fields {
+                    let ts_type = match field.field_type.as_str() {
+                        "String" => "string",
+                        "u32" | "i32" | "f64" => "number",
+                        "bool" => "boolean",
+                        _ => "unknown",
+                    };
+                    arg_types.push(format!("{}: {}", field.name, ts_type));
+                }
+                payload_arg = format!(", nextData: {{ {} }}", arg_types.join("; "));
+            }
+
+            output.push_str(&format!(
+                "  static transition(state: {}State, event: '{}'{}): {}State;\n",
+                state.name, transition.event, payload_arg, target_state.name
+            ));
+        }
+    }
+
+    output
+        .push_str("  static transition(state: AppState, event: string, nextData?: unknown): AppState {\n");
+    output.push_str("    switch (state.type) {\n");
+
+    for state in &program.states {
+        if state.transitions.is_empty() {
+            continue;
+        }
+
+        output.push_str(&format!("      case '{}':\n", state.name));
+        for transition in &state.transitions {
+            let target_state = program
+                .states
+                .iter()
+                .find(|s| s.name == transition.target)
+                .unwrap();
+
+            let data_assign = if target_state.data.is_some() {
+                format!(", data: nextData as {}State['data']", target_state.name)
+            } else {
+                String::new()
+            };
+
+            output.push_str(&format!(
+                "        if (event === '{}') return {{ type: '{}'{} }};\n",
+                transition.event, target_state.name, data_assign
+            ));
+        }
+        output.push_str("        break;\n");
+    }
+
+    output.push_str("    }\n");
+    output.push_str(
+        "    throw new Error(`Invalid transition: ${event} from state ${state.type}`);\n",
+    );
+    output.push_str("  }\n");
+    
+    output.push_str("}\n");
 
     output
 }
