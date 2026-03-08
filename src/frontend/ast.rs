@@ -52,3 +52,25 @@ pub enum TytoType {
     Array(Box<TytoType>),
     Optional(Box<TytoType>),
 }
+
+impl TytoType {
+    pub fn from_str(s: &str) -> Self {
+        if s.ends_with('?') {
+            let inner_type = Self::from_str(&s[..s.len() - 1]);
+            return TytoType::Optional(Box::new(inner_type));
+        }
+
+        if s.ends_with("[]") {
+            let inner_type = Self::from_str(&s[..s.len() - 2]);
+            return TytoType::Array(Box::new(inner_type));
+        }
+
+        match s {
+            "String" => TytoType::Base(BaseType::String),
+            "Int" => TytoType::Base(BaseType::Int),
+            "Float" => TytoType::Base(BaseType::Float),
+            "Bool" => TytoType::Base(BaseType::Bool),
+            _ => panic!("Unknown type: {}", s),
+        }
+    }
+}
