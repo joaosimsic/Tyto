@@ -94,12 +94,13 @@ fn main() {
                     }
 
                     for (lang, target_config) in &local_config.targets {
+                        fs::create_dir_all(&target_config.out_dir).unwrap();
+
                         if lang == "typescript" {
                             let ts_code = generate_ts(&ast);
 
-                            fs::create_dir_all(&target_config.out_dir).unwrap();
                             let file_path = Path::new(&target_config.out_dir)
-                                .join(format!("{}_protocol.ts", dir_name));
+                                .join(format!("{}.tyto.ts", dir_name));
 
                             fs::write(&file_path, ts_code).expect("Error saving generated file.");
                             println!("  TS successfully generated in: {}", file_path.display());
