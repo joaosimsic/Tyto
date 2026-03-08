@@ -1,0 +1,17 @@
+file = { SOI ~ state* ~ EOI }
+
+state = { "state" ~ ident ~ "{" ~ (transition | data_block | terminal_flag)* ~ "}" }
+
+transition = { "on" ~ ident ~ "->" ~ ident ~ ";" }
+
+data_block = { "data" ~ "{" ~ field* ~ "}" }
+
+field = { ident ~ ":" ~ ident ~ ","? }
+
+terminal_flag = { "terminal" ~ ";" }
+
+ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
