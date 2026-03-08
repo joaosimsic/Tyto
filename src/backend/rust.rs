@@ -3,6 +3,17 @@ use crate::frontend::ast::{BaseType, Field, State, TytoProgram, TytoType};
 
 pub struct RustGenerator;
 
+fn to_snake_case(s: &str) -> String {
+    let mut snake = String::new();
+    for (i, c) in s.char_indices() {
+        if i > 0 && c.is_uppercase() {
+            snake.push('_');    
+        }
+        snake.extend(c.to_lowercase());
+    }
+    snake
+}
+
 fn to_rust_type(ty: &TytoType) -> String {
     match ty {
         TytoType::Base(BaseType::String) => "String".to_string(),
@@ -94,7 +105,7 @@ impl Generator for RustGenerator {
                     format!(", {}", args.join(", "))
                 };
 
-                let fn_name = transition.event.to_lowercase();
+                let fn_name = to_snake_case(&transition.event);
 
                 output.push_str(&format!(
                     "    pub fn {}(self{}) -> {}State {{\n",
