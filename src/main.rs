@@ -14,8 +14,6 @@ use config::{GlobalConfig, LocalConfig};
 use frontend::parse_dsl;
 use middle::{StateGraph, Validator};
 
-use crate::backend::Generator;
-
 fn main() {
     let cli = Cli::parse();
 
@@ -109,6 +107,39 @@ fn main() {
                                 lang.to_uppercase(),
                                 file_path.display()
                             );
+
+                            if let Some(formatters) = &global_config.formatters {
+                                if let Some(cmd_str) = formatters.get(lang) {
+                                    let mut parts = cmd_str.split_whitespace();
+
+                                    if let Some(program) = parts.next() {
+                                        let mut command = std::process::Command::new(program);
+
+                                        for arg in parts {
+                                            command.arg(arg);
+                                        }
+
+                                        command.arg(&file_path);
+
+                                        match command.output() {
+                                            Ok(output) if output.status.success() => {
+                                                println!(
+                                                    "    Formatter '{}' applied successfully.",
+                                                    program
+                                                );
+                                            }
+                                            Ok(output) => {
+                                                let stderr =
+                                                    String::from_utf8_lossy(&output.stderr);
+                                                println!("    Warning: Formatter '{}' returned a non-zero status.\n{}", program, stderr);
+                                            }
+                                            Err(e) => {
+                                                println!("    Warning: Could not run formatter '{}' ({}). Is it installed in your PATH?", program, e);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         } else {
                             println!(
                                 "  Warning: Target language '{}' is not supported by Tyto.",
