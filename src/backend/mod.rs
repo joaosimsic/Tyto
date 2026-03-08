@@ -12,6 +12,6 @@ pub fn get_generator(lang: &str) -> Option<Box<dyn Generator>> {
     match lang {
         "typescript" => Some(Box::new(typescript::TypeScriptGenerator)),
         "rust" => Some(Box::new(rust::RustGenerator)),
-        _ => Nonw,
+        _ => None,
     }
 }
