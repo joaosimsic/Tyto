@@ -14,6 +14,7 @@ pub struct State {
 
 #[derive(Debug, Clone)]
 pub struct Transition {
+    pub transition_type: TransitionType,
     pub event: String,
     pub target: String,
 }
@@ -27,4 +28,12 @@ pub struct DataBlock {
 pub struct Field {
     pub name: String,
     pub field_type: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TransitionType {
+    Success,
+    Recoverable,
+    Fatal,
+    Default,
 }
