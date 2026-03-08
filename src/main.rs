@@ -8,6 +8,7 @@ use clap::Parser;
 use std::fs;
 use std::path::Path;
 
+use backend::rust::generate_rust;
 use backend::typescript::generate_ts;
 use cli::{Cli, Commands};
 use config::{GlobalConfig, LocalConfig};
@@ -104,6 +105,14 @@ fn main() {
 
                             fs::write(&file_path, ts_code).expect("Error saving generated file.");
                             println!("  TS successfully generated in: {}", file_path.display());
+                        } else if lang == "rust" {
+                            let rust_code = generate_rust(&ast);
+
+                            let file_path = Path::new(&target_config.out_dir)
+                                .join(format!("{}.tyto.rs", dir_name));
+
+                            fs::write(&file_path, rust_code).expect("Error saving generated file.");
+                            println!("  Rust successfully generated in: {}", file_path.display());
                         }
                     }
                     println!("");
