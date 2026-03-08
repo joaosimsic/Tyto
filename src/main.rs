@@ -18,6 +18,98 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
+        Commands::Init => {
+            println!("Tyto - Initializing new workspace...");
+
+            let global_yaml = "workspace_dir: \"./tyto\"\nformatters:\n  typescript: \"npx prettier --write\"\n  rust: \"rustfmt\"\n";
+            let local_yaml = "source: \"example.ty\"\ntargets:\n  typescript:\n    out_dir: \"../../output/ts\"\n  rust:\n    out_dir: \"../../output/rust\"\n  mermaid:\n    out_dir: \"../../output/docs\"\n";
+            let example_ty = "context {\n    user_id: String,\n}\n\nstate Idle {\n    on success Start -> Success;\n}\n\nstate Success {\n    terminal;\n}\n";
+
+            fs::write("tyto.yaml", global_yaml).expect("Failed to create tyto.yaml");
+
+            let example_path = Path::new("tyto/example");
+            fs::create_dir_all(example_path).expect("Failed to create tyto/example directory");
+
+            fs::write(example_path.join("example.yaml"), local_yaml)
+                .expect("Failed to create local yaml");
+            fs::write(example_path.join("example.ty"), example_ty)
+                .expect("Failed to create example.ty");
+
+            println!("  [✔] Created 'tyto.yaml' (Global Config)");
+            println!("  [✔] Created folder 'tyto/example/'");
+            println!("  [✔] Created 'tyto/example/example.yaml' (Local Config)");
+            println!("  [✔] Created 'tyto/example/example.ty' (DSL Source)");
+
+            println!("\nWorkspace initialized! Try running:");
+            println!("  tyto build");
+        }
+        Commands::Compile {
+            source,
+            langs,
+            out_dir,
+        } => {
+            let source_path = Path::new(source);
+            let source_dir = source_path.parent().unwrap_or(Path::new("."));
+            let file_stem = source_path.file_stem().unwrap().to_str().unwrap();
+
+            let local_yaml_path = source_dir.join(format!("{}.yaml", file_stem));
+            let local_config = LocalConfig::load(&local_yaml_path).ok();
+
+            let source_code = fs::read_to_string(source_path).unwrap_or_else(|_| {
+                eprintln!("Error: Source file '{}' not found.", source);
+                std::process::exit(1);
+            });
+
+            let ast = parse_dsl(&source_code).unwrap_or_else(|e| {
+                eprintln!("Syntax error:\n{}", e);
+                std::process::exit(1);
+            });
+
+            let graph = StateGraph::from_ast(&ast).expect("Semantic error.");
+            Validator::validate(&graph)
+                .map_err(|errors| {
+                    eprintln!("Validation Errors:");
+                    for err in errors {
+                        eprintln!("  - {}", err);
+                    }
+                    std::process::exit(1);
+                })
+                .unwrap();
+
+            let target_langs: Vec<&str> = langs.split(',').collect();
+
+            for lang in target_langs {
+                let lang = lang.trim();
+                if let Some(generator) = get_generator(lang) {
+                    let final_out_dir = if let Some(ref config) = local_config {
+                        if let Some(target) = config.targets.get(lang) {
+                            source_dir.join(&target.out_dir)
+                        } else {
+                            Path::new(out_dir).to_path_buf()
+                        }
+                    } else if out_dir != "." {
+                        Path::new(out_dir).to_path_buf()
+                    } else {
+                        source_dir.to_path_buf()
+                    };
+
+                    fs::create_dir_all(&final_out_dir).unwrap();
+
+                    let code = generator.generate(&ast);
+                    let file_name = format!("{}.{}", file_stem, generator.extension());
+                    let file_path = final_out_dir.join(file_name);
+
+                    fs::write(&file_path, code).expect("Error saving file.");
+                    println!(
+                        "  [{}] successfully generated: {}",
+                        lang.to_uppercase(),
+                        file_path.display()
+                    );
+                } else {
+                    println!("  Warning: Target language '{}' is not supported.", lang);
+                }
+            }
+        }
         Commands::Build { config, machine } => {
             println!("Tyto - Starting workspace build...\n");
 

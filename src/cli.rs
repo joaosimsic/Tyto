@@ -10,11 +10,22 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    Init,
+
     Build {
         #[arg(short, long, default_value = "tyto.yaml")]
         config: String,
 
-        #[arg(short, long)]
         machine: Option<String>,
+    },
+
+    Compile {
+        source: String,
+
+        #[arg(short, long)]
+        langs: String,
+
+        #[arg(short, long, default_value = ".")]
+        out_dir: String,
     },
 }
