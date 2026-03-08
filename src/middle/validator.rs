@@ -3,7 +3,11 @@ use std::collections::HashSet;
 use crate::frontend::ast::TransitionType;
 
 use super::graph::StateGraph;
-use petgraph::Direction::{self};
+use petgraph::{
+    graph::NodeIndex,
+    visit::Dfs,
+    Direction::{self},
+};
 
 pub struct Validator;
 
@@ -12,22 +16,17 @@ impl Validator {
         let mut errors = Vec::new();
         let graph = &state_graph.graph;
 
-        let roots: Vec<_> = graph
-            .node_indices()
-            .filter(|&node_idx| graph.edges_directed(node_idx, Direction::Incoming).count() == 0)
-            .collect();
+        if graph.node_count() == 0 {
+            errors.push("Invalid Architecture: The state machine is empty.".to_string());
+            return Err(errors);
+        }
 
-        if roots.is_empty() {
-            errors.push(
-                "Invalid Arquitecture: No initial state found (cyclic graph with no entry point)."
-                    .to_string(),
-            );
-        } else if roots.len() > 1 {
-            let root_names: Vec<_> = roots.iter().map(|&idx| graph[idx].as_str()).collect();
-            errors.push(format!(
-                "Invalid Architecture: Multiple initial states (roots) detected: {:?}",
-                root_names
-            ));
+        let root_idx = NodeIndex::new(0);
+
+        let mut reachable = HashSet::new();
+        let mut dfs = Dfs::new(graph, root_idx);
+        while let Some(nx) = dfs.next(graph) {
+            reachable.insert(nx);
         }
 
         for node_idx in graph.node_indices() {
@@ -37,7 +36,6 @@ impl Validator {
             let outgoing_edges: Vec<_> = graph
                 .edges_directed(node_idx, Direction::Outgoing)
                 .collect();
-            let incoming_count = graph.edges_directed(node_idx, Direction::Incoming).count();
 
             if is_terminal && !outgoing_edges.is_empty() {
                 errors.push(format!(
@@ -53,10 +51,10 @@ impl Validator {
             ));
             }
 
-            if incoming_count == 0 && roots.first() != Some(&node_idx) {
+            if !reachable.contains(&node_idx) {
                 errors.push(format!(
-                    "Orphan State: State '{}' is unreachable. No transitions point to it.",
-                    state_name
+                    "Orphan State: State '{}' is unreachable from the initial state '{}'.",
+                    state_name, graph[root_idx]
                 ));
             }
 
