@@ -30,5 +30,4 @@ impl LocalConfig {
         let contents = fs::read_to_string(path)?;
         Ok(serde_yaml::from_str(&contents)?)
     }
-
 }

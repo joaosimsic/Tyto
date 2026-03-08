@@ -83,7 +83,13 @@ fn main() {
                 if let Some(generator) = get_generator(lang) {
                     let final_out_dir = if let Some(ref config) = local_config {
                         if let Some(target) = config.targets.get(lang) {
-                            source_dir.join(&target.out_dir)
+                            let expanded = shellexpand::tilde(&target.out_dir);
+                            let out_path = Path::new(expanded.as_ref());
+                            if out_path.is_absolute() {
+                                out_path.to_path_buf()
+                            } else {
+                                source_dir.join(out_path)
+                            }
                         } else {
                             Path::new(out_dir).to_path_buf()
                         }
@@ -100,10 +106,11 @@ fn main() {
                     let file_path = final_out_dir.join(file_name);
 
                     fs::write(&file_path, code).expect("Error saving file.");
+                    let display_path = file_path.canonicalize().unwrap_or(file_path);
                     println!(
                         "  [{}] successfully generated: {}",
                         lang.to_uppercase(),
-                        file_path.display()
+                        display_path.display()
                     );
                 } else {
                     println!("  Warning: Target language '{}' is not supported.", lang);
@@ -186,18 +193,31 @@ fn main() {
                     }
 
                     for (lang, target_config) in &local_config.targets {
-                        fs::create_dir_all(&target_config.out_dir).unwrap();
+                        let expanded = shellexpand::tilde(&target_config.out_dir);
+                        let out_path = Path::new(expanded.as_ref());
+                        let final_out_dir = if out_path.is_absolute() {
+                            out_path.to_path_buf()
+                        } else {
+                            path.join(out_path)
+                        };
+
+                        fs::create_dir_all(&final_out_dir).unwrap();
 
                         if let Some(generator) = get_generator(lang) {
                             let code = generator.generate(&ast);
-                            let file_path = std::path::Path::new(&target_config.out_dir)
-                                .join(format!("{}.{}", dir_name, generator.extension()));
+                            let file_path = final_out_dir.join(format!(
+                                "{}.{}",
+                                dir_name,
+                                generator.extension()
+                            ));
 
                             fs::write(&file_path, code).expect("Error to save generated file.");
+                            let display_path =
+                                file_path.canonicalize().unwrap_or(file_path.clone());
                             println!(
                                 "  [{}] successfully generated in: {}",
                                 lang.to_uppercase(),
-                                file_path.display()
+                                display_path.display()
                             );
 
                             if let Some(formatters) = &global_config.formatters {
