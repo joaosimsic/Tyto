@@ -8,12 +8,13 @@ use clap::Parser;
 use std::fs;
 use std::path::Path;
 
-use backend::rust::generate_rust;
-use backend::typescript::generate_ts;
+use backend::get_generator;
 use cli::{Cli, Commands};
 use config::{GlobalConfig, LocalConfig};
 use frontend::parse_dsl;
 use middle::{StateGraph, Validator};
+
+use crate::backend::Generator;
 
 fn main() {
     let cli = Cli::parse();
@@ -97,22 +98,22 @@ fn main() {
                     for (lang, target_config) in &local_config.targets {
                         fs::create_dir_all(&target_config.out_dir).unwrap();
 
-                        if lang == "typescript" {
-                            let ts_code = generate_ts(&ast);
+                        if let Some(generator) = get_generator(lang) {
+                            let code = generator.generate(&ast);
+                            let file_path = std::path::Path::new(&target_config.out_dir)
+                                .join(format!("{}.{}", dir_name, generator.extension()));
 
-                            let file_path = Path::new(&target_config.out_dir)
-                                .join(format!("{}.tyto.ts", dir_name));
-
-                            fs::write(&file_path, ts_code).expect("Error saving generated file.");
-                            println!("  TS successfully generated in: {}", file_path.display());
-                        } else if lang == "rust" {
-                            let rust_code = generate_rust(&ast);
-
-                            let file_path = Path::new(&target_config.out_dir)
-                                .join(format!("{}.tyto.rs", dir_name));
-
-                            fs::write(&file_path, rust_code).expect("Error saving generated file.");
-                            println!("  Rust successfully generated in: {}", file_path.display());
+                            fs::write(&file_path, code).expect("Error to save generated file.");
+                            println!(
+                                "  [{}] successfully generated in: {}",
+                                lang.to_uppercase(),
+                                file_path.display()
+                            );
+                        } else {
+                            println!(
+                                "  Warning: Target language '{}' is not supported by Tyto.",
+                                lang
+                            );
                         }
                     }
                     println!("");
