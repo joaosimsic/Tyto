@@ -1,4 +1,4 @@
-file = { SOI ~ state* ~ EOI }
+file = { SOI ~ context_block? ~ state* ~ EOI }
 
 context_block = { "context" ~ "{" ~ field* ~ "}" }
 
