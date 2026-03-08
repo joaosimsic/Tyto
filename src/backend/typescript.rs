@@ -1,4 +1,14 @@
-use crate::frontend::ast::{Field, State, TytoProgram};
+use crate::frontend::ast::{BaseType, Field, State, TytoProgram, TytoType};
+
+fn to_ts_type(ty: &TytoType) -> String {
+    match ty {
+        TytoType::Base(BaseType::String) => "string".to_string(),
+        TytoType::Base(BaseType::Int) | TytoType::Base(BaseType::Float) => "number".to_string(),
+        TytoType::Base(BaseType::Bool) => "boolean".to_string(),
+        TytoType::Array(inner) => format!("{}[]", to_ts_type(inner)),
+        TytoType::Optional(inner) => format!("{} | undefined", to_ts_type(inner)),
+    }
+}
 
 fn get_state_fields(program: &TytoProgram, state: &State) -> Vec<Field> {
     let mut fields = Vec::new();
@@ -31,12 +41,7 @@ pub fn generate_ts(program: &TytoProgram) -> String {
         if !state_fields.is_empty() {
             output.push_str("   readonly data: {\n");
             for field in &state_fields {
-                let ts_type = match field.field_type.as_str() {
-                    "String" => "string",
-                    "Int" | "Float" => "number",
-                    "Bool" => "boolean",
-                    _ => "unknown",
-                };
+                let ts_type = to_ts_type(&field.field_type);
                 output.push_str(&format!("      {}: {};\n", field.name, ts_type));
             }
             output.push_str("   };\n");
@@ -79,12 +84,7 @@ pub fn generate_ts(program: &TytoProgram) -> String {
             if !new_fields.is_empty() {
                 let mut arg_types = Vec::new();
                 for field in &new_fields {
-                    let ts_type = match field.field_type.as_str() {
-                        "String" => "string",
-                        "Int" | "Float" => "number",
-                        "Bool" => "boolean",
-                        _ => "unknown",
-                    };
+                    let ts_type = to_ts_type(&field.field_type);
                     arg_types.push(format!("{}: {}", field.name, ts_type));
                 }
                 payload_arg = format!(", nextData: {{ {} }}", arg_types.join("; "));
