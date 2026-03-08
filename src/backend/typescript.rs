@@ -33,8 +33,8 @@ pub fn generate_ts(program: &TytoProgram) -> String {
             for field in &state_fields {
                 let ts_type = match field.field_type.as_str() {
                     "String" => "string",
-                    "u32" | "i32" | "f64" => "number",
-                    "bool" => "boolean",
+                    "Int" | "Float" => "number",
+                    "Bool" => "boolean",
                     _ => "unknown",
                 };
                 output.push_str(&format!("      {}: {};\n", field.name, ts_type));
@@ -81,8 +81,8 @@ pub fn generate_ts(program: &TytoProgram) -> String {
                 for field in &new_fields {
                     let ts_type = match field.field_type.as_str() {
                         "String" => "string",
-                        "u32" | "i32" | "f64" => "number",
-                        "bool" => "boolean",
+                        "Int" | "Float" => "number",
+                        "Bool" => "boolean",
                         _ => "unknown",
                     };
                     arg_types.push(format!("{}: {}", field.name, ts_type));

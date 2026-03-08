@@ -8,7 +8,9 @@ transition = { "on" ~ ident ~ "->" ~ ident ~ ";" }
 
 data_block = { "data" ~ "{" ~ field* ~ "}" }
 
-field = { ident ~ ":" ~ ident ~ ","? }
+field = { ident ~ ":" ~ type_name ~ ","? }
+
+type_name = { "String" | "Int" | "Float" | "Bool" }
 
 terminal_flag = { "terminal" ~ ";" }
 
