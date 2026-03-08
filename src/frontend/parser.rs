@@ -19,10 +19,10 @@ pub fn parse_dsl(input: &str) -> Result<TytoProgram, pest::error::Error<Rule>> {
                     for field_item in pair.into_inner() {
                         let mut field_inner = field_item.into_inner();
                         let field_name = field_inner.next().unwrap().as_str().to_string();
-                        let field_type = field_inner.next().unwrap().as_str().to_string();
+                        let field_type_str = field_inner.next().unwrap().as_str();
                         fields.push(Field {
                             name: field_name,
-                            field_type,
+                            field_type: TytoType::from_str(field_type_str),
                         });
                     }
                     context = Some(DataBlock { fields });
@@ -89,10 +89,10 @@ fn parse_state(pair: pest::iterators::Pair<Rule>) -> State {
                     if field_item.as_rule() == Rule::field {
                         let mut field_inner = field_item.into_inner();
                         let field_name = field_inner.next().unwrap().as_str().to_string();
-                        let field_type = field_inner.next().unwrap().as_str().to_string();
+                        let field_type_str = field_inner.next().unwrap().as_str();
                         fields.push(Field {
                             name: field_name,
-                            field_type,
+                            field_type: TytoType::from_str(field_type_str),
                         });
                     }
                 }
