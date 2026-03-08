@@ -2,18 +2,18 @@ use std::collections::HashMap;
 
 use petgraph::graph::{Graph, NodeIndex};
 
-use crate::frontend::ast::TytoProgram;
+use crate::frontend::ast::{Transition, TytoProgram};
 
 #[derive(Debug)]
 pub struct StateGraph {
-    pub graph: Graph<String, String>,
+    pub graph: Graph<String, Transition>,
     pub indices: HashMap<String, NodeIndex>,
     pub terminal_nodes: Vec<NodeIndex>,
 }
 
 impl StateGraph {
     pub fn from_ast(program: &TytoProgram) -> Result<Self, String> {
-        let mut graph = Graph::<String, String>::new();
+        let mut graph = Graph::<String, Transition>::new();
         let mut indices = HashMap::new();
         let mut terminal_nodes = Vec::new();
 
@@ -37,7 +37,7 @@ impl StateGraph {
                     )
                 })?;
 
-                graph.add_edge(*source_idx, *target_idx, transition.event.clone());
+                graph.add_edge(*source_idx, *target_idx, transition.clone());
             }
         }
 
