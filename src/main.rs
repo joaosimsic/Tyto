@@ -1,22 +1,21 @@
-mod frontend;
-mod middle;
+mod frontend; 
+mod middle; 
 mod backend;
 
-use frontend::parse_dsl;
-use middle::{StateGraph, Validator};
+use frontend::parse_dsl; 
+use middle::{StateGraph, Validator}; 
+use backend::generate_ts;
 
 fn main() {
     let input_code = r#"
         state Pendente {
             data { id: String, }
+            on Pagar -> Pago;
         }
 
         state Pago {
+            data { transaction_id: String, amount: f64, }
             on Enviar -> Enviado;
-        }
-
-        state Esquecido {
-            terminal;
         }
 
         state Enviado {
@@ -24,32 +23,30 @@ fn main() {
         }
     "#;
 
-    println!("Compiling DSL tyto... \n");
+    println!("Compilando DSL Tyto... \n");
 
     match parse_dsl(input_code) {
         Ok(ast) => {
-            println!("✅ AST generated successfully.");
+            println!("✅ AST gerada com sucesso.");
 
-            match StateGraph::from_ast(&ast) {
+            match StateGraph::from_ast(&ast) { 
                 Ok(graph) => {
-                    println!("✅ Graph generated successfully.");
-
-                    if let Err(errors) = Validator::validate(&graph) {
-                        println!("\n❌ Validation Errors Found:");
+                    if let Err(errors) = Validator::validate(&graph) { 
+                        println!("\n❌ Erros de Validação Encontrados:");
                         for err in errors {
                             eprintln!("  - {}", err);
                         }
                     } else {
-                        println!("✅ Validation passed! The state machine is sound.");
+                        println!("✅ Validação semântica aprovada!");
+                        
+                        let ts_code = generate_ts(&ast);
+                        println!("\n📦 Código TypeScript Gerado:\n");
+                        println!("{}", ts_code);
                     }
                 }
-                Err(e) => {
-                    eprintln!("❌ Graph Semantic Error:\n{}", e);
-                }
+                Err(e) => eprintln!("❌ Erro Semântico no Grafo:\n{}", e),
             }
         }
-        Err(e) => {
-            eprintln!("❌ Syntax error:\n{}", e);
-        }
+        Err(e) => eprintln!("❌ Erro de sintaxe:\n{}", e), //
     }
 }
