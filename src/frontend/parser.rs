@@ -51,10 +51,37 @@ fn parse_state(pair: pest::iterators::Pair<Rule>) -> State {
     for item in inner {
         match item.as_rule() {
             Rule::transition => {
-                let mut trans_inner = item.into_inner();
-                let event = trans_inner.next().unwrap().as_str().to_string();
-                let target = trans_inner.next().unwrap().as_str().to_string();
-                transitions.push(Transition { event, target });
+                let trans_inner = item.into_inner();
+                let mut transition_type = TransitionType::Default;
+                let mut event = String::new();
+                let mut target = String::new();
+
+                for trans_part in trans_inner {
+                    match trans_part.as_rule() {
+                        Rule::transition_type => {
+                            transition_type = match trans_part.as_str() {
+                                "success" => TransitionType::Success,
+                                "recoverable" => TransitionType::Recoverable,
+                                "fatal" => TransitionType::Fatal,
+                                _ => TransitionType::Default,
+                            };
+                        }
+                        Rule::ident => {
+                            if event.is_empty() {
+                                event = trans_part.as_str().to_string();
+                            } else {
+                                target = trans_part.as_str().to_string();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                transitions.push(Transition {
+                    transition_type,
+                    event,
+                    target,
+                });
             }
             Rule::data_block => {
                 let mut fields = Vec::new();
