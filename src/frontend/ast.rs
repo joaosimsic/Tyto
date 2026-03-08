@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub struct TytoProgram {
+    pub context: Option<DataBlock>,
     pub states: Vec<State>,
 }
 

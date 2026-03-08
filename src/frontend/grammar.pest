@@ -1,5 +1,7 @@
 file = { SOI ~ state* ~ EOI }
 
+context_block = { "context" ~ "{" ~ field* ~ "}" }
+
 state = { "state" ~ ident ~ "{" ~ (transition | data_block | terminal_flag)* ~ "}" }
 
 transition = { "on" ~ ident ~ "->" ~ ident ~ ";" }
