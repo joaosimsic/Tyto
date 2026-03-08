@@ -1,4 +1,5 @@
 mod frontend;
+mod middle;
 
 use frontend::parse_dsl;
 
