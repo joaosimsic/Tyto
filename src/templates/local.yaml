@@ -1,0 +1,8 @@
+source: "example.ty"
+targets:
+  typescript:
+    out_dir: "../../output/ts"
+  rust:
+    out_dir: "../../output/rust"
+  mermaid:
+    out_dir: "../../output/docs"

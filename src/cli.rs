@@ -17,24 +17,43 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    #[command(about = "Initialize a new Tyto workspace")]
     Init,
 
+    #[command(about = "Build all modules in the workspace")]
     Build {
-        #[arg(short, long, default_value = "tyto.yaml")]
+        #[arg(
+            short,
+            long,
+            default_value = "tyto.yaml",
+            help = "Path to global config"
+        )]
         config: String,
 
-        #[arg(value_name = "MODULE")]
+        #[arg(value_name = "MODULE", help = "Build only a specific module")]
         machine: Option<String>,
     },
 
+    #[command(about = "Compile a single source file")]
     Compile {
-        #[arg(value_name = "FILE")]
+        #[arg(value_name = "FILE", help = "Path to the source .ty file")]
         source: String,
 
-        #[arg(short, long, value_name = "LANGS")]
+        #[arg(
+            short,
+            long,
+            value_name = "LANGS",
+            help = "Target languages (comma-separated)"
+        )]
         langs: String,
 
-        #[arg(short, long, default_value = ".", value_name = "DIR")]
+        #[arg(
+            short,
+            long,
+            default_value = ".",
+            value_name = "DIR",
+            help = "Output directory"
+        )]
         out_dir: String,
     },
 }

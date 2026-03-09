@@ -1,0 +1,4 @@
+workspace_dir: "./tyto"
+formatters:
+  typescript: "npx prettier --write"
+  rust: "rustfmt"

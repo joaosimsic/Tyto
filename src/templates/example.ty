@@ -1,0 +1,11 @@
+context {
+    user_id: String,
+}
+
+state Idle {
+    on success Start -> Success;
+}
+
+state Success {
+    terminal;
+}
