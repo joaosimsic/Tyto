@@ -2,6 +2,9 @@
 name = "tyto"
 version = "0.1.0"
 edition = "2024"
+description = "DSL transpiler for state machines to type-safe Rust/TS/Java/Mermaid"
+repository = "https://github.com/joaosimsic/Tyto"
+license = "MIT"
 
 [dependencies]
 clap = { version = "4.5.60", features = ["derive", "color"] }

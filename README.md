@@ -63,8 +63,8 @@ Tyto performs comprehensive validation:
 ### Build from source
 
 ```bash
-git clone <repository-url>
-cd tyto
+git clone https://github.com/joaosimsic/Tyto.git
+cd Tyto
 
 # Build
 cargo build --release

@@ -4,8 +4,14 @@ context {
 
 state Idle {
     on success Start -> Success;
+    on recoverable Retry -> Idle;
+    on fatal Abort -> Failed;
 }
 
 state Success {
+    terminal;
+}
+
+state Failed {
     terminal;
 }
