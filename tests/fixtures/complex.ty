@@ -1,0 +1,22 @@
+context { user_id: String, order_id: String, amount: Float }
+
+state Pending {
+    data { created_at: String }
+    on success Pay -> Paid;
+    on recoverable Retry -> Pending;
+    on fatal Cancel -> Cancelled;
+}
+
+state Paid {
+    data { transaction_id: String, paid_at: String }
+    on Ship -> Shipped;
+    on Refund -> Refunded;
+}
+
+state Shipped {
+    data { tracking_number: String?, items: String[] }
+    terminal;
+}
+
+state Refunded { terminal; }
+state Cancelled { terminal; }

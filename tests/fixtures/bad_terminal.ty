@@ -1,0 +1,7 @@
+state A {
+    on Go -> B;
+    terminal;
+}
+state B {
+    terminal;
+}

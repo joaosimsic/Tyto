@@ -1,0 +1,12 @@
+context { order_id: String, amount: Float }
+
+state Pending {
+    on success Pay -> Paid;
+    on fatal Cancel -> Cancelled;
+}
+
+state Paid {
+    data { transaction_id: String, paid_at: String }
+    terminal;
+}
+state Cancelled { terminal; }

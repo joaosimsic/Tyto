@@ -1,0 +1,6 @@
+state A {
+    on Go -> B;
+}
+state B {
+    data { value: Int }
+}

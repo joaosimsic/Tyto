@@ -1,0 +1,7 @@
+state A {
+    on Loop -> A;
+}
+state Orphan {
+    data { value: Int }
+    terminal;
+}

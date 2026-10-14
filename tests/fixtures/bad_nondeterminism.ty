@@ -1,0 +1,10 @@
+state A {
+    on Go -> B;
+    on Go -> C;
+}
+state B {
+    terminal;
+}
+state C {
+    terminal;
+}

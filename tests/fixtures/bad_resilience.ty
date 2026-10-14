@@ -1,0 +1,6 @@
+state Start {
+    on success Pay -> Done;
+}
+state Done {
+    terminal;
+}

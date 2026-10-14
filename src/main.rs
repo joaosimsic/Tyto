@@ -1,18 +1,8 @@
-mod backend;
-mod cli;
-mod commands;
-mod compiler;
-mod config;
-mod error;
-mod frontend;
-mod middle;
-mod templates;
-mod ui;
-
 use clap::Parser;
 
-use cli::{Cli, Commands};
-use error::Error;
+use tyto::cli::{Cli, Commands};
+use tyto::error::Error;
+use tyto::{commands, ui};
 
 fn main() {
     let cli = Cli::parse();

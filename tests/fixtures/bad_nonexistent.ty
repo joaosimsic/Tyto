@@ -1,0 +1,6 @@
+state A {
+    on Go -> Missing;
+}
+state B {
+    terminal;
+}
